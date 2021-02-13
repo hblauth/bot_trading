@@ -1,0 +1,5 @@
+setup.py
+trading_functions.egg-info/PKG-INFO
+trading_functions.egg-info/SOURCES.txt
+trading_functions.egg-info/dependency_links.txt
+trading_functions.egg-info/top_level.txt
