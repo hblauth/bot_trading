@@ -1,12 +1,14 @@
-import pandas as pd
+# TODO
+# [] Refactor
+# [] Add tests
+
+import re
+import numpy as np
 import datetime as dt
+import pandas as pd
 
 btc_daily = pd.read_csv(
     '/Users/henry/code/projects/bot_trading/data/binance_BTCUSDT_1d_2017-01-01.csv')
-
-# DELETE ----------------------------------------------------
-btc_daily.head()
-# DELETE ----------------------------------------------------
 
 # As daily pricing, timestamp col = close_timestamp so convert to datetime and drop both
 btc_daily['date'] = [dt.date.fromtimestamp(
@@ -55,23 +57,84 @@ btc_daily['sys1_b_short_entry'] = btc_daily['low'] < btc_daily['low'].shift(
 btc_daily['sys2_short_entry'] = btc_daily['low'] < btc_daily['low'].shift(
     1).rolling(window=55).min()
 
-# Calculate exits
-# Long exits
+# Calculate stops
+# Long stops
+# Strategy 1
+# Stop = 2ATR
+btc_daily['stop'] = btc_
+
+
+# Generalise:
+Window:
+stop strategy: normal / whipsaw
+
+
 btc_daily['sys1_a_long_exit'] = btc_daily['low'] < btc_daily['low'].shift(
     1).rolling(window=10).max()
-btc_daily['sys1_b_long_exit'] = btc_daily['low'] > btc_daily['lowhigh'].shift(
+btc_daily['sys1_b_long_exit'] = btc_daily['low'] < btc_daily['low'].shift(
     1).rolling(window=10).max()
-btc_daily['sys2_long_exit'] = btc_daily['low'] > btc_daily['low'].shift(
+btc_daily['sys2_long_exit'] = btc_daily['low'] < btc_daily['low'].shift(
     1).rolling(window=20).max()
 
-# Short entries
+# Short stops
 btc_daily['sys1_a_short_exit'] = btc_daily['high'] > btc_daily['high'].shift(
     1).rolling(window=14).min()
 btc_daily['sys1_b_short_exit'] = btc_daily['high'] > btc_daily['high'].shift(
     1).rolling(window=20).min()
 btc_daily['sys2_short_exit'] = btc_daily['high'] > btc_daily['high'].shift(
     1).rolling(window=55).min()
-btc_daily
+
+# Positions
+btc_daily['sys1_a_long_pos'] = np.nan
+btc_daily.loc[btc_daily['sys1_a_long_entry'], 'sys1_a_long_pos'] = 1
+btc_daily.loc[btc_daily['sys1_a_long_exit'], 'sys1_a_long_pos'] = 0
+btc_daily['sys1_a_long_pos'].fillna(method='ffill', inplace=True)
 
 # ---- TESTING ---- ---- TESTING ---- ---- TESTING ---- ---- TESTING ---- ---- TESTING ---- ---- TESTING ----
 # ---- TESTING ---- ---- TESTING ---- ---- TESTING ---- ---- TESTING ---- ---- TESTING ---- ---- TESTING ----
+
+
+def establish_positions(df, entry_col, exit_col, direction='long', position_col='position'):
+    # Check cols in df
+    assert entry_col in df.columns, 'Entry column not in dataframe'
+    assert exit_col in df.columns, 'Exit column not in dataframe'
+
+    # Create empty column for binary position flag - 1 = buy/holding, 0 = sell/not holding
+    df[position_col] = np.nan
+
+    # Act when entry indicated:
+    # If long, set position col = 1
+    if direction == 'long':
+        df.loc[btc_daily[entry_col], position_col] = 1
+    # If short, set position col = -1
+    elif direction == 'short':
+        df.loc[btc_daily[entry_col], position_col] = -1
+
+    # Sell when exit indicated: if exit col = True, set position col = 0
+    df.loc[btc_daily[exit_col], position_col] = 0
+
+    # If nan, maintain previous position
+    df[position_col].fillna(method='ffill', inplace=True)
+
+
+strategies = ['sys1_a', 'sys1_b', 'sys2']
+directions = ['long', 'short']
+
+for sd in [s + '_' + d for d in directions for s in strategies]:
+
+    # Find direction
+    if re.search(r'short', sd):
+        direction = 'short'
+    else:
+        direction = 'long'
+
+    establish_positions(
+        btc_daily, f'{sd}_entry', f'{sd}_exit', direction, f'{sd}_pos')
+
+
+# Trade costs
+
+# Bet sizing
+
+
+btc_daily.head(100).to_csv('btc_test.csv')
